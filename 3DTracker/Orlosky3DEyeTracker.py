@@ -42,12 +42,12 @@ def crop_to_aspect_ratio(image, width=640, height=480):
         # Current image is too wide
         new_width = int(desired_ratio * current_height)
         offset = (current_width - new_width) // 2
-        cropped_img = image[:, offset : offset + new_width]
+        cropped_img = image[:, offset: offset + new_width]
     else:
         # Current image is too tall
         new_height = int(current_width / desired_ratio)
         offset = (current_height - new_height) // 2
-        cropped_img = image[offset : offset + new_height, :]
+        cropped_img = image[offset: offset + new_height, :]
 
     return cv2.resize(cropped_img, (width, height))
 
@@ -55,7 +55,8 @@ def crop_to_aspect_ratio(image, width=640, height=480):
 # Apply thresholding to an image
 def apply_binary_threshold(image, darkestPixelValue, addedThreshold):
     threshold = darkestPixelValue + addedThreshold
-    _, thresholded_image = cv2.threshold(image, threshold, 255, cv2.THRESH_BINARY_INV)
+    _, thresholded_image = cv2.threshold(
+        image, threshold, 255, cv2.THRESH_BINARY_INV)
     return thresholded_image
 
 
@@ -130,8 +131,10 @@ def optimize_contours_by_angle(contours, image):
 
         # Get three points: current point, previous point, and next point
         current_point = all_contours[i]
-        prev_point = all_contours[i - spacing] if i - spacing >= 0 else all_contours[-spacing]
-        next_point = all_contours[i + spacing] if i + spacing < len(all_contours) else all_contours[spacing]
+        prev_point = all_contours[i - spacing] if i - \
+            spacing >= 0 else all_contours[-spacing]
+        next_point = all_contours[i + spacing] if i + \
+            spacing < len(all_contours) else all_contours[spacing]
 
         # Calculate vectors between points
         vec1 = prev_point - current_point
@@ -139,7 +142,8 @@ def optimize_contours_by_angle(contours, image):
 
         with np.errstate(invalid="ignore"):
             # Calculate angles between vectors
-            angle = np.arccos(np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2)))
+            angle = np.arccos(np.dot(vec1, vec2) /
+                              (np.linalg.norm(vec1) * np.linalg.norm(vec2)))
 
         # Calculate vector from current point to centroid
         vec_to_centroid = centroid - current_point
@@ -176,7 +180,8 @@ def filter_contours_by_area_and_return_largest(contours, pixel_thresh, ratio_thr
 def fit_and_draw_ellipses(image, optimized_contours, color):
     if len(optimized_contours) >= 5:
         # Ensure the data is in the correct shape (n, 1, 2) for cv2.fitEllipse
-        contour = np.array(optimized_contours, dtype=np.int32).reshape((-1, 1, 2))
+        contour = np.array(optimized_contours,
+                           dtype=np.int32).reshape((-1, 1, 2))
 
         # Fit ellipse
         ellipse = cv2.fitEllipse(contour)
@@ -210,7 +215,8 @@ def check_contour_pixels(contour, image_shape, debug_mode_on):
     ellipse = cv2.fitEllipse(contour)
 
     # Draw the ellipse with a specific thickness
-    cv2.ellipse(ellipse_mask_thick, ellipse, (255), 10)  # capture more for absolute
+    cv2.ellipse(ellipse_mask_thick, ellipse, (255),
+                10)  # capture more for absolute
     # capture fewer for ratio
     cv2.ellipse(ellipse_mask_thin, ellipse, (255), 4)
 
@@ -219,13 +225,16 @@ def check_contour_pixels(contour, image_shape, debug_mode_on):
     overlap_thin = cv2.bitwise_and(contour_mask, ellipse_mask_thin)
 
     # Count the number of non-zero (white) pixels in the overlap
-    absolute_pixel_total_thick = np.sum(overlap_thick > 0)  # compute with thicker border
-    absolute_pixel_total_thin = np.sum(overlap_thin > 0)  # compute with thicker border
+    absolute_pixel_total_thick = np.sum(
+        overlap_thick > 0)  # compute with thicker border
+    absolute_pixel_total_thin = np.sum(
+        overlap_thin > 0)  # compute with thicker border
 
     # Compute the ratio of pixels under the ellipse to the total pixels on the contour border
     total_border_pixels = np.sum(contour_mask > 0)
 
-    ratio_under_ellipse = absolute_pixel_total_thin / total_border_pixels if total_border_pixels > 0 else 0
+    ratio_under_ellipse = absolute_pixel_total_thin / \
+        total_border_pixels if total_border_pixels > 0 else 0
 
     return [absolute_pixel_total_thick, ratio_under_ellipse, overlap_thin]
 
@@ -268,7 +277,8 @@ def check_ellipse_goodness(binary_image, contour, debug_mode_on):
     axes_lengths = ellipse[1]
     major_axis_length = axes_lengths[1]
     minor_axis_length = axes_lengths[0]
-    ellipse_goodness[2] = min(ellipse[1][1] / ellipse[1][0], ellipse[1][0] / ellipse[1][1])
+    ellipse_goodness[2] = min(
+        ellipse[1][1] / ellipse[1][0], ellipse[1][0] / ellipse[1][1])
 
     return ellipse_goodness
 
@@ -293,12 +303,15 @@ def process_frames(
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
 
     dilated_image = cv2.dilate(thresholded_image_medium, kernel, iterations=2)
-    contours, _ = cv2.findContours(dilated_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    reduced_contours = filter_contours_by_area_and_return_largest(contours, 1000, 3)
+    contours, _ = cv2.findContours(
+        dilated_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    reduced_contours = filter_contours_by_area_and_return_largest(
+        contours, 1000, 3)
 
     final_rotated_rect = ((0, 0), (0, 0), 0)
 
-    image_array = [thresholded_image_relaxed, thresholded_image_medium, thresholded_image_strict]  # holds images
+    image_array = [thresholded_image_relaxed, thresholded_image_medium,
+                   thresholded_image_strict]  # holds images
     name_array = ["relaxed", "medium", "strict"]  # for naming windows
     final_image = image_array[0]  # holds return array
     final_contours = []  # holds final contours
@@ -317,33 +330,40 @@ def process_frames(
     # iterate through binary images and see which fits the ellipse best
     for i in range(1, 4):
         # Dilate the binary image
-        dilated_image = cv2.dilate(image_array[i - 1], kernel, iterations=2)  # medium
+        dilated_image = cv2.dilate(
+            image_array[i - 1], kernel, iterations=2)  # medium
 
         # Find contours
-        contours, hierarchy = cv2.findContours(dilated_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, hierarchy = cv2.findContours(
+            dilated_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         # Create an empty image to draw contours
         contour_img2 = np.zeros_like(dilated_image)
-        reduced_contours = filter_contours_by_area_and_return_largest(contours, 1000, 3)
+        reduced_contours = filter_contours_by_area_and_return_largest(
+            contours, 1000, 3)
 
         # initialize variables
         center_x, center_y = None, None
 
         if len(reduced_contours) > 0 and len(reduced_contours[0]) > 5:
-            current_goodness = check_ellipse_goodness(dilated_image, reduced_contours[0], debug_mode_on)
+            current_goodness = check_ellipse_goodness(
+                dilated_image, reduced_contours[0], debug_mode_on)
             ellipse = cv2.fitEllipse(reduced_contours[0])
             center_x, center_y = map(int, ellipse[0])
             if debug_mode_on:  # show contours
-                cv2.imshow(name_array[i - 1] + " threshold", gray_copies[i - 1])
+                cv2.imshow(name_array[i - 1] +
+                           " threshold", gray_copies[i - 1])
 
             # in total pixels, first element is pixel total, next is ratio
-            total_pixels = check_contour_pixels(reduced_contours[0], dilated_image.shape, debug_mode_on)
+            total_pixels = check_contour_pixels(
+                reduced_contours[0], dilated_image.shape, debug_mode_on)
 
             # Draw with specified color and thickness of 2
             cv2.ellipse(gray_copies[i - 1], ellipse, (255, 0, 0), 2)
             font = cv2.FONT_HERSHEY_SIMPLEX  # Font type
 
-            final_goodness = current_goodness[0] * total_pixels[0] * total_pixels[0] * total_pixels[1]
+            final_goodness = current_goodness[0] * \
+                total_pixels[0] * total_pixels[0] * total_pixels[1]
 
         if final_goodness > 0 and final_goodness > goodness:
             goodness = final_goodness
@@ -374,7 +394,8 @@ def process_frames(
 
     model_center = compute_average_intersection(frame, ray_lines, 5, 1500, 5)
     if model_center is not None:
-        model_center_average = update_and_average_point(model_centers, model_center, 200)
+        model_center_average = update_and_average_point(
+            model_centers, model_center, 200)
 
     if model_center_average[0] == 320:
         model_center_average = prev_model_center_avg
@@ -387,19 +408,23 @@ def process_frames(
 
     # Calculate the distance only if model_centers has at least 100 values
     if len(model_centers) >= 100 and center_x is not None:
-        distance = math.sqrt((center_x - model_center_average[0]) ** 2 + (center_y - model_center_average[1]) ** 2)
+        distance = math.sqrt(
+            (center_x - model_center_average[0]) ** 2 + (center_y - model_center_average[1]) ** 2)
         if distance > max_observed_distance:
             max_observed_distance = distance
 
     max_observed_distance = 202
 
     # Draw reference lines/ellipses
-    cv2.circle(frame, model_center_average, int(max_observed_distance), (255, 50, 50), 2)  # Draw eye sphere (circle)
-    cv2.circle(frame, model_center_average, 8, (255, 255, 0), -1)  # Draw eye center
+    cv2.circle(frame, model_center_average, int(max_observed_distance),
+               (255, 50, 50), 2)  # Draw eye sphere (circle)
+    cv2.circle(frame, model_center_average, 8,
+               (255, 255, 0), -1)  # Draw eye center
 
     if final_rotated_rect is not None and center_x is not None and center_y is not None:
         cv2.line(
-            frame, model_center_average, (center_x, center_y), (255, 150, 50), 2
+            frame, model_center_average, (center_x,
+                                          center_y), (255, 150, 50), 2
         )  # # Draw line from eye center to ellipse center
 
     # draw final ellipse on image
@@ -416,7 +441,8 @@ def process_frames(
         extended_y = int(model_center_average[1] + 2 * dy)
 
         # Draw the extended gaze line
-        cv2.line(frame, (center_x, center_y), (extended_x, extended_y), (200, 255, 0), 3)
+        cv2.line(frame, (center_x, center_y),
+                 (extended_x, extended_y), (200, 255, 0), 3)
 
     if render_cv_window:
         cv2.imshow("Best Thresholded Image Contours on Frame", frame)
@@ -428,7 +454,8 @@ def process_frames(
     # cv2.circle(frame, (center_x, center_y), 22, (255, 255, 0), -1)  # Draw intersection center
 
     # Call the function
-    center, direction = compute_gaze_vector(center_x, center_y, model_center_average[0], model_center_average[1])
+    center, direction = compute_gaze_vector(
+        center_x, center_y, model_center_average[0], model_center_average[1])
 
     if center is not None and direction is not None:
         origin_text = f"Origin: ({center[0]:.2f}, {
@@ -443,20 +470,24 @@ def process_frames(
         text_dir2 = (10, frame.shape[0] - 15)  # 15 pixels from bottom
 
         # Draw shadow text on the frame
-        cv2.putText(frame, origin_text, text_origin, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3)
-        cv2.putText(frame, dir_text, text_dir, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3)
+        cv2.putText(frame, origin_text, text_origin,
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3)
+        cv2.putText(frame, dir_text, text_dir,
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3)
         # Draw text on the frame
-        cv2.putText(frame, origin_text, text_origin2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-        cv2.putText(frame, dir_text, text_dir2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        cv2.putText(frame, origin_text, text_origin2,
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        cv2.putText(frame, dir_text, text_dir2,
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
     if center is not None and direction is not None:
         print(
             f"Sphere Center:   ({center[0]:.3f}, {
-              center[1]:.3f}, {center[2]:.3f})"
+                center[1]:.3f}, {center[2]:.3f})"
         )
         print(
             f"Gaze Direction:  ({direction[0]:.3f}, {
-              direction[1]:.3f}, {direction[2]:.3f})"
+                direction[1]:.3f}, {direction[2]:.3f})"
         )
     else:
         print("No valid intersection found.")
@@ -521,8 +552,10 @@ def draw_orthogonal_ray(image, ellipse, length=100, color=(0, 255, 0), thickness
     normal_dy = (minor_axis / 2) * np.sin(angle_rad)
 
     # Compute start and end points of the orthogonal ray
-    pt1 = (int(cx - length * normal_dx / (minor_axis / 2)), int(cy - length * normal_dy / (minor_axis / 2)))
-    pt2 = (int(cx + length * normal_dx / (minor_axis / 2)), int(cy + length * normal_dy / (minor_axis / 2)))
+    pt1 = (int(cx - length * normal_dx / (minor_axis / 2)),
+           int(cy - length * normal_dy / (minor_axis / 2)))
+    pt2 = (int(cx + length * normal_dx / (minor_axis / 2)),
+           int(cy + length * normal_dy / (minor_axis / 2)))
 
     # Draw the ray
     cv2.line(image, pt1, pt2, color, thickness)
@@ -632,8 +665,10 @@ def find_line_intersection(ellipse1, ellipse2):
     angle2_rad = np.deg2rad(angle2)
 
     # Compute direction vectors for the two lines
-    dx1, dy1 = (minor_axis1 / 2) * np.cos(angle1_rad), (minor_axis1 / 2) * np.sin(angle1_rad)
-    dx2, dy2 = (minor_axis2 / 2) * np.cos(angle2_rad), (minor_axis2 / 2) * np.sin(angle2_rad)
+    dx1, dy1 = (minor_axis1 / 2) * \
+        np.cos(angle1_rad), (minor_axis1 / 2) * np.sin(angle1_rad)
+    dx2, dy2 = (minor_axis2 / 2) * \
+        np.cos(angle2_rad), (minor_axis2 / 2) * np.sin(angle2_rad)
 
     # Line equations in parametric form:
     # (x1, y1) + t1 * (dx1, dy1) = (x2, y2) + t2 * (dx2, dy2)
@@ -697,7 +732,8 @@ def compute_gaze_vector(x, y, center_x, center_y, screen_width=640, screen_heigh
     inner_radius = 1.0 / 1.05
     sphere_offset_x = (center_x / screen_width) * 2.0 - 1.0
     sphere_offset_y = 1.0 - (center_y / screen_height) * 2.0
-    sphere_center = np.array([sphere_offset_x * 1.5, sphere_offset_y * 1.5, 0.0])
+    sphere_center = np.array(
+        [sphere_offset_x * 1.5, sphere_offset_y * 1.5, 0.0])
 
     # Compute intersection with sphere
     origin = ray_origin
@@ -714,7 +750,8 @@ def compute_gaze_vector(x, y, center_x, center_y, screen_width=640, screen_heigh
         t = -np.dot(direction, L) / np.dot(direction, direction)
         intersection_point = origin + t * direction
         intersection_local = intersection_point - sphere_center
-        target_direction = intersection_local / np.linalg.norm(intersection_local)
+        target_direction = intersection_local / \
+            np.linalg.norm(intersection_local)
     else:
         sqrt_disc = np.sqrt(discriminant)
         t1 = (-b - sqrt_disc) / (2 * a)
@@ -824,14 +861,20 @@ def process_frame(frame):
 
     # apply thresholding operations at different levels
     # at least one should give us a good ellipse segment
-    thresholded_image_strict = apply_binary_threshold(gray_frame, darkest_pixel_value, 5)  # lite
-    thresholded_image_strict = mask_outside_square(thresholded_image_strict, darkest_point, 250)
+    thresholded_image_strict = apply_binary_threshold(
+        gray_frame, darkest_pixel_value, 5)  # lite
+    thresholded_image_strict = mask_outside_square(
+        thresholded_image_strict, darkest_point, 250)
 
-    thresholded_image_medium = apply_binary_threshold(gray_frame, darkest_pixel_value, 15)  # medium
-    thresholded_image_medium = mask_outside_square(thresholded_image_medium, darkest_point, 250)
+    thresholded_image_medium = apply_binary_threshold(
+        gray_frame, darkest_pixel_value, 15)  # medium
+    thresholded_image_medium = mask_outside_square(
+        thresholded_image_medium, darkest_point, 250)
 
-    thresholded_image_relaxed = apply_binary_threshold(gray_frame, darkest_pixel_value, 25)  # heavy
-    thresholded_image_relaxed = mask_outside_square(thresholded_image_relaxed, darkest_point, 250)
+    thresholded_image_relaxed = apply_binary_threshold(
+        gray_frame, darkest_pixel_value, 25)  # heavy
+    thresholded_image_relaxed = mask_outside_square(
+        thresholded_image_relaxed, darkest_point, 250)
 
     # take the three images thresholded at different levels and process them
     final_rotated_rect = process_frames(
@@ -848,94 +891,143 @@ def process_frame(frame):
     return final_rotated_rect
 
 
+# -----------------------------
+# Robust window handling helpers
+# -----------------------------
+WINDOW_RAYS = "Frame with Ellipse and Rays"
+# only used if you actually show a cv2 window with this name
+WINDOW_BLEND = "Eye Tracker + Sphere"
+
+
+def ensure_windows():
+    # Create windows once so cv2.getWindowProperty never crashes on first check
+    try:
+        cv2.namedWindow(WINDOW_RAYS, cv2.WINDOW_AUTOSIZE)
+    except cv2.error:
+        pass
+    if GL_SPHERE_AVAILABLE:
+        try:
+            cv2.namedWindow(WINDOW_BLEND, cv2.WINDOW_NORMAL)
+        except cv2.error:
+            pass
+
+
+def safe_window_visible(name: str) -> bool:
+    try:
+        val = cv2.getWindowProperty(name, cv2.WND_PROP_VISIBLE)
+        return val >= 1
+    except cv2.error:
+        # Window never created or already destroyed
+        return False
+
+
+def run_capture_loop(cap: cv2.VideoCapture, flip_vertical: bool = False):
+    if not cap.isOpened():
+        print("Error: Could not open capture source.")
+        return
+
+    ensure_windows()
+
+    try:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            if flip_vertical:
+                frame = cv2.flip(frame, 0)
+
+            process_frame(frame)
+
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord("q"):
+                break
+            elif key == ord(" "):
+                # pause until any key
+                if cv2.waitKey(0) & 0xFF == ord("q"):
+                    break
+
+            # Stop if user closes the main window(s)
+            if not safe_window_visible(WINDOW_RAYS):
+                break
+
+            if GL_SPHERE_AVAILABLE and safe_window_visible(WINDOW_BLEND) is False:
+                # Only break if you actually show this blended window under that exact name.
+                # If you don't, remove this block or keep it harmless like this.
+                pass
+    finally:
+        cap.release()
+        cv2.destroyAllWindows()
+
+
+# -----------------------------
 # Process video from the selected camera
+# -----------------------------
 def process_camera():
-    global selected_camera
     cam_index = int(selected_camera.get())
 
     cap = cv2.VideoCapture(cam_index)
-    cap.set(cv2.CAP_PROP_EXPOSURE, -6)
+    # Setting exposure may fail on some cams; ignore errors quietly
+    try:
+        cap.set(cv2.CAP_PROP_EXPOSURE, -6)
+    except Exception:
+        pass
 
-    if not cap.isOpened():
-        print("Error: Could not open camera.")
-        return
-
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-
-        frame = cv2.flip(frame, 0)
-        process_frame(frame)
-
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord("q"):
-            break
-        elif key == ord(" "):
-            cv2.waitKey(0)
-
-    cap.release()
-    cv2.destroyAllWindows()
+    run_capture_loop(cap, flip_vertical=True)
 
 
+# -----------------------------
 # Process a selected video file
+# -----------------------------
 def process_video():
-    video_path = filedialog.askopenfilename(filetypes=[("Video Files", "*.mp4;*.avi")])
-
+    video_path = filedialog.askopenfilename(
+        filetypes=[("Video Files", "*.mp4;*.avi;*.mov;*.mkv")])
     if not video_path:
-        return  # User canceled selection
+        return
 
     cap = cv2.VideoCapture(video_path)
-
-    if not cap.isOpened():
-        print("Error: Could not open video file.")
-        return
-
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-
-        process_frame(frame)
-
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord("q"):
-            break
-        elif key == ord(" "):
-            cv2.waitKey(0)
-
-    cap.release()
-    cv2.destroyAllWindows()
+    run_capture_loop(cap, flip_vertical=False)
 
 
+# -----------------------------
 # GUI for selecting camera or video
+# -----------------------------
 def selection_gui():
     global selected_camera
     cameras = detect_cameras()
 
-    # Create Tkinter window
     root = tk.Tk()
     root.title("Select Input Source")
-    tk.Label(root, text="Orlosky Eye Tracker 3D", font=("Arial", 12, "bold")).pack(pady=10)
+    tk.Label(root, text="Orlosky Eye Tracker 3D",
+             font=("Arial", 12, "bold")).pack(pady=10)
 
     tk.Label(root, text="Select Camera:").pack(pady=5)
 
     selected_camera = tk.StringVar()
-    selected_camera.set(str(cameras[0]) if cameras else "No cameras found")
+    selected_camera.set(str(cameras[0]) if cameras else "0")
 
-    camera_dropdown = ttk.Combobox(root, textvariable=selected_camera, values=[str(cam) for cam in cameras])
+    camera_dropdown = ttk.Combobox(root, textvariable=selected_camera, values=[
+                                   str(cam) for cam in cameras] or ["0"])
     camera_dropdown.pack(pady=5)
 
-    tk.Button(root, text="Start Camera", command=lambda: [root.destroy(), process_camera()]).pack(pady=5)
-    tk.Button(root, text="Browse Video", command=lambda: [root.destroy(), process_video()]).pack(pady=5)
+    tk.Button(root, text="Start Camera", command=lambda: [
+              root.destroy(), process_camera()]).pack(pady=5)
+    tk.Button(root, text="Browse Video", command=lambda: [
+              root.destroy(), process_video()]).pack(pady=5)
 
     if GL_SPHERE_AVAILABLE:
-        # Start GL sphere window once
-        app = gl_sphere.start_gl_window()
+        # If your GL window must be started before processing, start it here.
+        # It runs in its own context; avoid mixing with cv2 window names.
+        try:
+            gl_sphere.start_gl_window()
+        except Exception:
+            pass
 
     root.mainloop()
 
 
+# -----------------------------
 # Run GUI to select camera or video
+# -----------------------------
 if __name__ == "__main__":
     selection_gui()
