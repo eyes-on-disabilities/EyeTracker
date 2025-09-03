@@ -25,7 +25,7 @@ max_observed_distance = 0  # Initialize adaptive radius
 def detect_cameras(max_cams=10):
     available_cameras = []
     for i in range(max_cams):
-        cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
+        cap = cv2.VideoCapture(i)
         if cap.isOpened():
             available_cameras.append(i)
             cap.release()
@@ -801,7 +801,7 @@ def process_camera():
     global selected_camera
     cam_index = int(selected_camera.get())
 
-    cap = cv2.VideoCapture(cam_index, cv2.CAP_DSHOW)
+    cap = cv2.VideoCapture(cam_index)
     cap.set(cv2.CAP_PROP_EXPOSURE, -6)
 
     if not cap.isOpened():
