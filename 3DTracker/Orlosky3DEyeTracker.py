@@ -772,6 +772,8 @@ def process_frame(frame):
     # Crop and resize frame
     frame = crop_to_aspect_ratio(frame)
 
+    frame = cv2.rotate(frame, cv2.ROTATE_180)
+
     #find the darkest point
     darkest_point = get_darkest_area(frame)
 
